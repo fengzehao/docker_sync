@@ -1,0 +1,100 @@
+name: Mirror Docker Image to Aliyun
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_image:
+        description: '源镜像地址 (例如: mcr.microsoft.com/devcontainers/jekyll:2-bullseye)'
+        required: true
+        default: 'alpine:latest'
+      target_image_name:
+        description: '目标镜像名称 (留空则自动使用源镜像名)'
+        required: false
+        default: ''
+      target_tag:
+        description: '目标镜像标签 (留空则自动使用源镜像标签)'
+        required: false
+        default: ''
+
+# 全局环境变量配置
+env:
+  # 目标仓库地址
+  DEST_REGISTRY: ${{ secrets.ALIYUN_REGISTRY }}
+  # 命名空间
+  NAMESPACE: ${{ secrets.ALIYUN_NAMESPACE }}
+
+jobs:
+  mirror-image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 1. 登录阿里云容器镜像服务
+      - name: Login to Aliyun Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.DEST_REGISTRY }}
+          username: ${{ secrets.ALIYUN_USERNAME }}
+          password: ${{ secrets.ALIYUN_PASSWORD }}
+
+      # 2. 拉取、重命名并推送镜像
+      - name: Pull, Retag and Push
+        run: |
+          # --- 1. 参数准备 ---
+          SOURCE_IMAGE="${{ github.event.inputs.source_image }}"
+          CUSTOM_NAME="${{ github.event.inputs.target_image_name }}"
+          CUSTOM_TAG="${{ github.event.inputs.target_tag }}"
+          
+          echo "Processing Source Image正在处理源镜像: $SOURCE_IMAGE"
+
+          # --- 2. 拉取源镜像 ---
+          docker pull $SOURCE_IMAGE
+
+          # --- 3. 解析镜像名称和标签 ---
+          # 提取源镜像的 Tag，如果源镜像没写Tag，默认是 latest
+          if [[ "$SOURCE_IMAGE" == *:* ]]; then
+            SOURCE_TAG=$(echo "$SOURCE_IMAGE" | awk -F':' '{print $NF}')
+          else
+            SOURCE_TAG="latest"
+          fi
+
+          # 提取源镜像的名称
+          SOURCE_NAME=$(echo "$SOURCE_IMAGE" | awk -F':' '{print $1}' | awk -F'/' '{print $NF}')
+
+          # --- 4. 决定目标名称和标签 ---
+          # 如果用户手动输入了名称，用用户的，否则用源镜像名
+          if [ -n "$CUSTOM_NAME" ]; then
+            TARGET_NAME="$CUSTOM_NAME"
+          else
+            TARGET_NAME="$SOURCE_NAME"
+          fi
+
+          # 如果用户手动输入了Tag，用用户的，否则用源镜像Tag
+          if [ -n "$CUSTOM_TAG" ]; then
+            TARGET_TAG="$CUSTOM_TAG"
+          else
+            TARGET_TAG="$SOURCE_TAG"
+          fi
+
+          # 拼接最终的阿里云地址
+          NEW_IMAGE="${{ env.DEST_REGISTRY }}/${{ env.NAMESPACE }}/${TARGET_NAME}:${TARGET_TAG}"
+
+          echo "Rename Image as: $NEW_IMAGE"
+          echo "FINAL_MIRROR_IMAGE=$NEW_IMAGE" >> $GITHUB_ENV
+
+          # --- 5. 重新打标签并推送 ---
+          docker tag "$SOURCE_IMAGE" "$NEW_IMAGE"
+          docker push "$NEW_IMAGE"
+
+          echo "Image Push Success!"
+          echo "How to Pull: docker pull $NEW_IMAGE"
+
+      # 3. 结果摘要
+      - name: Summary
+        run: |
+          echo "Image Sync Finished." >> $GITHUB_STEP_SUMMARY
+          echo "Source Image: ${{ github.event.inputs.source_image }}" >> $GITHUB_STEP_SUMMARY
+          echo "Target Image: ${{ env.FINAL_MIRROR_IMAGE }}" >> $GITHUB_STEP_SUMMARY
+          echo "Run to pull:" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ${{ env.FINAL_MIRROR_IMAGE }}" >> $GITHUB_STEP_SUMMARY
