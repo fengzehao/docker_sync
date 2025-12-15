@@ -95,6 +95,3 @@ jobs:
         run: |
           echo "Image Sync Finished." >> $GITHUB_STEP_SUMMARY
           echo "Source Image: ${{ github.event.inputs.source_image }}" >> $GITHUB_STEP_SUMMARY
-          echo "Target Image: ${{ env.FINAL_MIRROR_IMAGE }}" >> $GITHUB_STEP_SUMMARY
-          echo "Run to pull:" >> $GITHUB_STEP_SUMMARY
-          echo "docker pull ${{ env.FINAL_MIRROR_IMAGE }}" >> $GITHUB_STEP_SUMMARY
