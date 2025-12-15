@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       source_image:
-        description: 'debian:trixie-slim'
+        description: '源镜像地址'
         required: true
         default: 'alpine:latest'
       target_image_name:
