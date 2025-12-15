@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       source_image:
-        description: '源镜像地址 (例如: mcr.microsoft.com/devcontainers/jekyll:2-bullseye)'
+        description: 'debian:trixie-slim'
         required: true
         default: 'alpine:latest'
       target_image_name:
@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       # 1. 登录阿里云容器镜像服务
       - name: Login to Aliyun Container Registry
