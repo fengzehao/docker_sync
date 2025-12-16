@@ -6,7 +6,6 @@ on:
       source_image:
         description: '源镜像地址'
         required: true
-        default: 'alpine:latest'
       target_image_name:
         description: '目标镜像名称 (留空则自动使用源镜像名)'
         required: false
