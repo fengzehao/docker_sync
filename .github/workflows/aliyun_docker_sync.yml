@@ -1,5 +1,4 @@
 name: Mirror Docker Image to Aliyun
-
 on:
   workflow_dispatch:
     inputs:
@@ -14,6 +13,7 @@ on:
         description: '目标镜像标签 (留空则自动使用源镜像标签)'
         required: false
         default: ''
+# Action Name
 run-name: "Mirror ${{ inputs.source_image }} to Aliyun"
 # 全局环境变量配置
 env:
